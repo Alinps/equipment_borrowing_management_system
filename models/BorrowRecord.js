@@ -3,7 +3,7 @@ const mongoose = require('../database/db');
 
 const borrowRecordSchema = new mongoose.Schema({
 
-    user: {
+    borrower: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Borrower',
         required: true
@@ -13,6 +13,12 @@ const borrowRecordSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref:'Equipment',
         required: true
+    },
+
+    quantity: {
+        type: Number,
+        required: true,
+        min: 1
     },
 
     borrowedAt:{

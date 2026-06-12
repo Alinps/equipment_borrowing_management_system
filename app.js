@@ -8,7 +8,7 @@ require('./database/db');
 const adminRoutes = require('./routes/adminRoutes');
 const equipmentRoutes =  require('./routes/equipmentRoutes');
 const userRoutes = require('./routes/userRoutes');
-
+const borrowRoutes = require('./routes/borrowRoutes');
 
 var app = express();
 
@@ -24,6 +24,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/borrow', borrowRoutes);
 
 
 

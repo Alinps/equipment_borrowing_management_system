@@ -16,10 +16,17 @@ const equipmentSchema = new mongoose.Schema({
     required: true,
     trim:true
   },
+  totalQuantity: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  
   availableQuantity:{
     type:Number,
     min:0
   },
+  
   status: {
     type: String,
     enum :['Available','Maintenance','Retired'],
