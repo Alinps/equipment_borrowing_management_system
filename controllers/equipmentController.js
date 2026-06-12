@@ -1,3 +1,4 @@
+const Equipments = require('../models/Equipments');
 const Equipment = require('../models/Equipments');
 
 const createEquipment = async (req, res) => {
@@ -119,8 +120,32 @@ const deleteEquipment = async (req, res) => {
     }
 }
 
+
+const listEquipment = async (req, res ) => {
+
+    try {
+
+        const equipments = await Equipment.find().sort({availableQuantity: -1});
+
+        return res.status(200).json({
+            success: true,
+            count: equipments.length,
+            data: equipments
+        })
+
+    } catch(error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+}
+
 module.exports = {
     createEquipment,
     updateEquipment,
-    deleteEquipment
+    deleteEquipment,
+    listEquipment
 }

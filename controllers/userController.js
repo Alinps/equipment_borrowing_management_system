@@ -18,9 +18,6 @@ const userRegister = async (req, res) => {
 
 
 
-
-
-
         if (!validator.isEmail(email)) {
 
             return res.status(400).json({

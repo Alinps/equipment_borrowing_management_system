@@ -4,7 +4,6 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-
 require('./database/db');
 const adminRoutes = require('./routes/adminRoutes');
 const equipmentRoutes =  require('./routes/equipmentRoutes');

@@ -1,5 +1,6 @@
 const { JsonWebTokenError } = require('jsonwebtoken');
 const User = require('../models/User');
+const Borrower = require('../models/Borrower');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
@@ -166,7 +167,7 @@ const listUsers = async (req, res) => {
                 $nin: ['ADMIN', 'MANAGER']
             }
 
-        }).sort({ createdAt: -1 });; //  find all the users from the db and sorted in descending order by created time
+        }).sort({ createdAt: -1 }); //  find all the users from the db and sorted in descending order by created time
 
         return res.status(200).json({
             success: true,
@@ -226,13 +227,171 @@ const blockUser = async (req, res) => {
 
 
 
+const createBorrower = async (req, res) => {
+
+    try {
+
+        const {
+            name,
+            email,
+            department,
+            phoneNumber,
+        } = req.body;
 
 
+         if (!validator.isEmail(email)) {
+
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid email format'
+            });
+
+        }
+
+        const existingBorrower = await Borrower.findOne({
+            email
+        });
+
+        if (existingBorrower) {
+            
+            return res.status(400).json({
+                success: false,
+                message: "Email already exists"
+            })
+        }
+
+        const borrower = await Borrower.create({
+            name,
+            email,
+            phoneNumber,
+            department
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "Borrower created successfully",
+            data : borrower
+        })
+
+    } catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
+
+
+const editBorrower = async (req, res) => {
+
+    try {
+
+        const {id} = req.params;
+        console.log(id);
+
+        const allowedField = ["name","email","department","phoneNumber"];
+
+        const updatedData = {};
+
+        for (const field of allowedField) {
+
+            if (req.body[field] !== undefined) {
+                updatedData[field] = req.body[field];
+            }
+        }
+
+        const borrower = await Borrower.findByIdAndUpdate(
+            id,
+            {
+                 $set: updatedData
+            },
+            {
+                new: true,
+                runValidators: true
+            }
+        )
+
+        if (!borrower) {
+
+            return res.status(404).json({
+                success: false,
+                message: "Borrower not found"
+            });
+        }
+        
+        return res.status(200).json({
+            success: true,
+            data: borrower
+        })
+     } catch(error) {
+
+        return res.status(500).json({
+            
+            success: false,
+            message: error.message
+        });
+     }
+}
+
+
+const listBorrower = async (req, res) => {
+    
+    try {
+
+        const borrowers = await Borrower.find().sort({createdAt: -1});
+
+        return res.status(200).json({
+            success: true,
+            count: borrowers.length,
+            data: borrowers
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
+
+
+const deleteBorrower = async (req, res) => {
+
+    try {
+
+        const {id} = req.params;
+        const borrower = await Borrower.findByIdAndDelete(id);
+
+        if (!borrower) {
+        
+            return res.status(404).json({
+                success: false,
+                message: "borrower not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "borrower deleted successfully"
+        })
+    } catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
 
 
 module.exports = {
     registerAdmin,
     adminLogin,
     listUsers,
-    blockUser
+    blockUser,
+    createBorrower,
+    editBorrower,
+    listBorrower,
+    deleteBorrower
 };
