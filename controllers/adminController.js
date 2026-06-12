@@ -385,6 +385,34 @@ const deleteBorrower = async (req, res) => {
 }
 
 
+const borrowerById = async (req, res) => {
+
+    try {
+
+        const {id} = req.params;
+        const borrower = await Borrower.findById(id);
+        if (!borrower) {
+            return res.status(404).json({
+                success: false,
+                message: "borrower not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: borrower
+        });
+    } catch(error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+
+}
+
+
 module.exports = {
     registerAdmin,
     adminLogin,
@@ -393,5 +421,6 @@ module.exports = {
     createBorrower,
     editBorrower,
     listBorrower,
-    deleteBorrower
+    deleteBorrower,
+    borrowerById
 };
