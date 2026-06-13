@@ -10,6 +10,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const equipmentRoutes =  require('./routes/equipmentRoutes');
 const userRoutes = require('./routes/userRoutes');
 const borrowRoutes = require('./routes/borrowRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes')
 
 var app = express();
 
@@ -34,6 +35,7 @@ app.use('/api/equipment', equipmentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/borrow', borrowRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 
 
