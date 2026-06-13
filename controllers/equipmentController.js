@@ -174,10 +174,30 @@ const getEquipmentById = async (req,res) => {
     }
 }
 
+
+const getAllEquipmentNameAndId = async (req,res) => {
+
+    try {
+
+        const equipments = await Equipment.find().select('_id name catogory').sort({ name: 1 });  
+        return res.status(200).json({
+
+            success: true,
+            data: equipments
+        })
+    } catch (error) {
+        return res.status(500).json({
+
+            success: false,
+            message: error.message
+        });
+    }
+}
 module.exports = {
     createEquipment,
     updateEquipment,
     deleteEquipment,
     listEquipment,
-    getEquipmentById
+    getEquipmentById,
+    getAllEquipmentNameAndId
 }

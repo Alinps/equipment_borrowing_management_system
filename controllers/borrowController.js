@@ -214,10 +214,41 @@ const getBorrowerHistory = async (req, res) => {
 };
 
 
+
+const getAllBorrowerNameAndId = async (req, res) => {
+
+    try{
+
+        const borrowers = await Borrower.find().select('_id name').sort({ name: 1 });   
+         
+        if (!borrowers) {
+
+            return res.status(400).json({
+                success: false,
+                message: "No Borrowers found, Something went wrong"
+            });
+        }
+
+        return res.status(200).json({
+
+            success: true,
+            data: borrowers
+        });
+    } catch(error) {
+
+        return res.status(500).json({
+
+            success: false,
+            message: error.message
+        })
+    }
+}
+
 module.exports = {
     borrowEquipment,
     returnEquipment,
     getActiveBorrowings,
     getBorrowHistory,
-    getBorrowerHistory
+    getBorrowerHistory,
+    getAllBorrowerNameAndId
 }
