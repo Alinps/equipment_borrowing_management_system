@@ -145,9 +145,39 @@ const listEquipment = async (req, res ) => {
     }
 }
 
+
+const getEquipmentById = async (req,res) => {
+
+    try {
+
+        const {id} = req.params;
+        const equipment = await Equipment.findById(id);
+        if(!equipment) {
+
+            return res.status(500).json({
+                success: false,
+                message: " Requested Equipment not found"
+            })
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: equipment
+        })
+    } catch (error) {
+
+        return res.status(500).json({
+
+            success: false,
+            message: error.message
+        })
+    }
+}
+
 module.exports = {
     createEquipment,
     updateEquipment,
     deleteEquipment,
-    listEquipment
+    listEquipment,
+    getEquipmentById
 }

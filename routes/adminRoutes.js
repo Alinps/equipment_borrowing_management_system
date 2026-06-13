@@ -11,7 +11,8 @@ const {
     editBorrower,
     listBorrower,
     deleteBorrower,
-    borrowerById
+    borrowerById,
+  
 
 } = require('../controllers/adminController');
 const authenticate = require('../middleware/auth');
