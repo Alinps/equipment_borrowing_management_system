@@ -16,7 +16,7 @@ const {
 } = require('../controllers/borrowController');
 
 router.post('/create', authenticate, adminAuth, borrowEquipment);
-router.patch('/return/:id', authenticate, adminAuth, returnEquipment);
+router.put('/return/:id', authenticate, adminAuth, returnEquipment);
 router.get('/borrow-records/active', authenticate, adminAuth, getActiveBorrowings);
 router.get('/borrower-records', authenticate,adminAuth, getBorrowHistory );
 router.get('/borrower-records/:id', authenticate, adminAuth, getBorrowerHistory);

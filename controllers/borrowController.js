@@ -98,6 +98,16 @@ const returnEquipment = async (req, res) => {
         const {id} = req.params;
         const record = await BorrowRecord.findById(id);
 
+
+        if (!record.equipment) {
+
+            return res.status(400).json({
+                success: false,
+                message: "Equipment reference missing"
+            });
+
+        }       
+
         if (!record) {
             
             return res.status(404).json({
@@ -114,6 +124,8 @@ const returnEquipment = async (req, res) => {
             });
         }
 
+        
+
         await Equipment.findByIdAndUpdate(
             record.equipment,
             {
@@ -123,7 +135,7 @@ const returnEquipment = async (req, res) => {
             }
         );
 
-        record.status == 'RETURNED';
+        record.status = 'RETURNED';
         record.actualReturnDate = new Date();
 
         await record.save();
@@ -150,9 +162,7 @@ const getActiveBorrowings = async (req, res) => {
 
     try {
 
-        const records = await BorrowRecord.find({
-                status: 'BORROWED'
-            })
+        const records = await BorrowRecord.find({status: 'BORROWED'})
             .populate('borrower')
             .populate('equipment');
 
