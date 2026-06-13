@@ -3,6 +3,7 @@ var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
+const cors = require("cors");
 var logger = require('morgan');
 require('./database/db');
 const adminRoutes = require('./routes/adminRoutes');
@@ -12,9 +13,17 @@ const borrowRoutes = require('./routes/borrowRoutes');
 
 var app = express();
 
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
+
+app.use(
+    cors({
+        origin: process.env.FRONTEND_URL,
+        credentials: true
+    })
+);
 
 app.use(logger('dev'));
 app.use(express.json());
@@ -25,6 +34,7 @@ app.use('/api/equipment', equipmentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/borrow', borrowRoutes);
+
 
 
 

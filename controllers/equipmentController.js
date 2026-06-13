@@ -9,6 +9,7 @@ const createEquipment = async (req, res) => {
             catogory, 
             serialNumber, 
             availableQuantity,
+            totalQuantity,
             status 
         } = req.body;
 
@@ -18,6 +19,7 @@ const createEquipment = async (req, res) => {
             catogory,
             serialNumber,
             availableQuantity,
+            totalQuantity,
             status
         });
 
@@ -27,8 +29,8 @@ const createEquipment = async (req, res) => {
         });
 
     } catch(error){
-
-        res.status(500).json({
+        console.log(error)
+        return res.status(500).json({
             success:false,
             message: error.message
         });

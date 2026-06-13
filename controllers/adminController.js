@@ -83,7 +83,7 @@ const adminLogin = async (req, res) => {
 
     try {
 
-        const {email, password } = req.body
+        const {email, password} = req.body
 
         
 
@@ -143,7 +143,8 @@ const adminLogin = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            token
+            token,
+            user:admin.username
         });
 
     } catch (error){
