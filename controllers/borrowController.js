@@ -177,11 +177,21 @@ const getActiveBorrowings = async (req, res) => {
 
 const getBorrowHistory = async (req, res) => {
 
-    const records = await BorrowRecord.find()
+    try {
+
+        const records = await BorrowRecord.find()
         .populate('borrower')
         .populate('equipment');
 
-    res.json(records);
+        return res.json(records);
+
+    } catch(error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        })
+    }
 
 };
 
