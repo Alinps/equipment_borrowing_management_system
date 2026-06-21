@@ -1,6 +1,9 @@
 const Borrower = require('../models/Borrower');
 const BorrowRecord = require('../models/BorrowRecord');
 const Equipment = require('../models/Equipments');
+const logger = require('../utils/logger');
+
+
 
 const getDashboard = async (req, res) => {
 
@@ -68,6 +71,32 @@ const getDashboard = async (req, res) => {
 
         ]);
 
+        logger.info('Dashboard Retrieved',{
+
+        requestedBy:
+            req.user?.userId,
+
+        totalEquipment,
+
+        totalBorrowers,
+
+        activeBorrowings,
+
+        overdueBorrowings,
+
+        availableQuantity:
+            availableQuantityResult[0]
+                ?.total || 0,
+
+        recentBorrowingsCount:
+            recentBorrowings.length,
+
+        lowStockEquipmentCount:
+            lowStockEquipment.length
+
+    }
+    );
+
         return res.status(200).json({
 
             success: true,
@@ -96,15 +125,30 @@ const getDashboard = async (req, res) => {
 
     } catch (error) {
 
-        return res.status(500).json({
+    logger.error('Dashboard Error',{
 
-            success: false,
+            requestedBy:
+                req.user?.userId,
 
-            message: error.message
+            error:
+                error.message,
 
-        });
+            stack:
+                error.stack
 
-    }
+        }
+    );
+
+    return res.status(500).json({
+
+        success: false,
+
+        message:
+            error.message
+
+    });
+
+}
 
 };
 

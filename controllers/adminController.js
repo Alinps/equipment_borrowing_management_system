@@ -579,9 +579,7 @@ const listBorrower = async (req, res) => {
         const totalRecords = await Borrower.countDocuments(query);
 
         const borrowers = await Borrower.find(query)
-                                        .sort({
-                                            createdAt: -1
-                                        })
+                                        .sort({createdAt: -1})
                                         .skip(skip)
                                         .limit(limit);
 
@@ -589,8 +587,7 @@ const listBorrower = async (req, res) => {
             'Borrower List Retrieved',
             {
 
-                requestedBy:
-                    req.user?.userId,
+                requestedBy:req.user?.userId,
 
                 search,
 
@@ -598,8 +595,7 @@ const listBorrower = async (req, res) => {
 
                 limit,
 
-                returnedRecords:
-                    borrowers.length,
+                returnedRecords: borrowers.length,
 
                 totalRecords
 
@@ -612,13 +608,9 @@ const listBorrower = async (req, res) => {
 
             currentPage: page,
 
-            totalPages:
-                Math.ceil(
-                    totalRecords / limit
-                ),
+            totalPages:Math.ceil(totalRecords / limit),
 
-            count:
-                borrowers.length,
+            count:borrowers.length,
 
             totalRecords,
 
@@ -632,20 +624,15 @@ const listBorrower = async (req, res) => {
             'Borrower List Error',
             {
 
-                requestedBy:
-                    req.user?.userId,
+                requestedBy: req.user?.userId,
 
-                search:
-                    req.query?.search,
+                search: req.query?.search,
 
-                page:
-                    req.query?.page,
+                page: req.query?.page,
 
-                error:
-                    error.message,
+                error: error.message,
 
-                stack:
-                    error.stack
+                stack: error.stack
 
             }
         );
@@ -654,8 +641,7 @@ const listBorrower = async (req, res) => {
 
             success: false,
 
-            message:
-                error.message
+            message: error.message
 
         });
 
@@ -679,11 +665,9 @@ const deleteBorrower = async (req, res) => {
 
                     borrowerId: id,
 
-                    requestedBy:
-                        req.user?.userId,
+                    requestedBy: req.user?.userId,
 
-                    reason:
-                        'Borrower not found'
+                    reason: 'Borrower not found'
 
                 }
             );
