@@ -2,6 +2,7 @@
 const Borrower = require('../models/Borrower');
 const BorrowRecord = require('../models/BorrowRecord');
 const Equipment = require('../models/Equipments');
+const mongoose = require('mongoose');
 
 const borrowEquipment = async (req, res) => {
 
@@ -162,12 +163,26 @@ const getActiveBorrowings = async (req, res) => {
 
     try {
 
+        const page = Number(req.query.page) || 1;
+
+        const limit = Number(req.query.limit) || 10;
+
+        const skip = (page - 1) * limit;
+
+        const totalRecords = await BorrowRecord.countDocuments();
+
+    
         const records = await BorrowRecord.find({status: 'BORROWED'})
             .populate('borrower')
-            .populate('equipment');
+            .populate('equipment')
+            .skip(skip)
+            .limit(limit);
 
         return res.status(200).json({
             success: true,
+            currentPage: page,
+            totalPages: Math.ceil(totalRecords/limit),
+            totalRecords,
             data: records
         });
 
@@ -333,24 +348,151 @@ const getBorrowHistory = async (req, res) => {
 const getBorrowerHistory = async (req, res) => {
 
     try {
-        const {id} = req.params;
-        console.log(id);
-        const records = await BorrowRecord.find({
-                borrower: id
-            })
-            .populate('borrower')
-            .populate('equipment');
+
+        const { id } = req.params;
+
+        const search = req.query.search || '';
+
+        const page = Number(req.query.page) || 1;
+
+        const limit = Number(req.query.limit) || 10;
+
+        const skip = (page - 1) * limit;
+
+        const pipeline = [
+
+            {
+                $match: {
+                    borrower: new mongoose.Types.ObjectId(id)
+                }
+            },
+
+              {
+                $lookup: {
+                    from: 'borrowers',
+                    localField: 'borrower',
+                    foreignField: '_id',
+                    as: 'borrower'
+                }
+            },
+
+            {
+                $unwind: '$borrower'
+            },
+
+
+            {
+                $lookup: {
+                    from: 'equipment',
+                    localField: 'equipment',
+                    foreignField: '_id',
+                    as: 'equipment'
+                }
+            },
+
+            {
+                $unwind: '$equipment'
+            }
+
+        ];
+
+        if (search) {
+
+            pipeline.push({
+
+                $match: {
+
+                    $or: [
+
+                        {
+                            'equipment.name': {
+                                $regex: search,
+                                $options: 'i'
+                            }
+                        },
+
+                        {
+                            'equipment.category': {
+                                $regex: search,
+                                $options: 'i'
+                            }
+                        },
+
+                        {
+                            status: {
+                                $regex: search,
+                                $options: 'i'
+                            }
+                        }
+
+                    ]
+
+                }
+
+            });
+
+        }
+
+        const totalResult =
+            await BorrowRecord.aggregate([
+                ...pipeline,
+                {
+                    $count: 'total'
+                }
+            ]);
+
+        const totalRecords =
+            totalResult[0]?.total || 0;
+
+        pipeline.push(
+
+            {
+                $sort: {
+                    borrowedAt: -1
+                }
+            },
+
+            {
+                $skip: skip
+            },
+
+            {
+                $limit: limit
+            }
+
+        );
+
+        const records =
+            await BorrowRecord.aggregate(
+                pipeline
+            );
+            console.log(records)
 
         return res.status(200).json({
+
             success: true,
+
+            currentPage: page,
+
+            totalPages:
+                Math.ceil(
+                    totalRecords / limit
+                ),
+
+            totalRecords,
+
             data: records
+
         });
 
     } catch (error) {
 
         return res.status(500).json({
+
             success: false,
+
             message: error.message
+
         });
 
     }
