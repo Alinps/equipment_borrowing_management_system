@@ -3,10 +3,17 @@ const Borrower = require('../models/Borrower');
 const BorrowRecord = require('../models/BorrowRecord');
 const Equipment = require('../models/Equipments');
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
+
+
 
 const borrowEquipment = async (req, res) => {
 
+    const session = await mongoose.startSession();
+
     try {
+
+        session.startTransaction();
 
         const {
             borrowerId,
@@ -16,182 +23,254 @@ const borrowEquipment = async (req, res) => {
             remarks
         } = req.body;
 
-        const borrower = await Borrower.findById(borrowerId); // finds the borrower by id 
+        const borrower =
+            await Borrower.findById(
+                borrowerId
+            ).session(session);
 
-        if(!borrower) {
+        if (!borrower) {
 
-            return res.status(404).json({
-
-                success: false,
-                message: "Borrower not found"
-            });
-        }
-
-        const expectedDate = new Date(expectedReturnDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        expectedDate.setHours(0, 0, 0, 0);
-        if (expectedDate < today) {
-
-            return res.status(400).json({
-                success: false,
-                message:'Expected return date cannot be in the past'
-        });
-    }
-
-        const equipment = await Equipment.findOneAndUpdate(
-            
-        {
-            _id: equipmentId,
-            status: 'Available',
-            availableQuantity: {
-                $gte: quantity   // only return if the available quantity is less than or equal to the requested quantity.
-            }
-
-        },
-        {
-            $inc: {
-                availableQuantity: -quantity // reduce the available quantity with requested quantity
-            }
-        },
-        {
-            returnDocument: 'after'
-        }
-    );
-
-    if (!equipment) {
-
-        return res.status(400).json({
-            success: false,
-            message: "Insufficient quantity available"
-        });
-    }
-
-    const record = await BorrowRecord.create({
-        borrower: borrowerId,
-        equipment: equipmentId,
-        quantity,
-        expectedReturnDate,
-        remarks
-    });
-
-    return res.status(201).json({
-        success: true,
-        message: 'Equipment borrowed successfully',
-        data: record
-    });
-
-    } catch (error) {
-
-        return res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-}
-
-
-
-const returnEquipment = async (req, res) => {
-
-    try {
-
-        const {id} = req.params;
-        const record = await BorrowRecord.findById(id);
-
-
-        if (!record.equipment) {
-
-            return res.status(400).json({
-                success: false,
-                message: "Equipment reference missing"
-            });
-
-        }       
-
-        if (!record) {
-            
-            return res.status(404).json({
-                success: false,
-                message: 'Borrow record  not found'
-            });
-        }
-
-        if (record.status == 'RETURNED') {
-
-            return res.status(400).json({
-                success: false,
-                message: 'Equipment already returned'
-            });
-        }
-
-        
-
-        await Equipment.findByIdAndUpdate(
-            record.equipment,
-            {
-                $inc:{
-                    availableQuantity: record.quantity
+            logger.warn(
+                'Borrow Equipment Failed',
+                {
+                    borrowerId,
+                    equipmentId,
+                    quantity,
+                    requestedBy:
+                        req.user?.userId,
+                    reason:
+                        'Borrower not found'
                 }
+            );
+
+            await session.abortTransaction();
+
+            return res.status(404).json({
+                success: false,
+                message: 'Borrower not found'
+            });
+
+        }
+
+        const expectedDate =
+            new Date(expectedReturnDate);
+
+        const today =
+            new Date();
+
+        today.setHours(
+            0, 0, 0, 0
+        );
+
+        expectedDate.setHours(
+            0, 0, 0, 0
+        );
+
+        if (
+            expectedDate < today
+        ) {
+
+            logger.warn(
+                'Borrow Equipment Failed',
+                {
+                    borrowerId,
+                    equipmentId,
+                    quantity,
+                    expectedReturnDate,
+                    requestedBy:
+                        req.user?.userId,
+                    reason:
+                        'Expected return date is in the past'
+                }
+            );
+
+            await session.abortTransaction();
+
+            return res.status(400).json({
+
+                success: false,
+
+                message:
+                    'Expected return date cannot be in the past'
+
+            });
+
+        }
+
+        const equipment =
+            await Equipment.findOneAndUpdate(
+
+                {
+                    _id: equipmentId,
+
+                    status: 'Available',
+
+                    availableQuantity: {
+                        $gte: quantity
+                    }
+                },
+
+                {
+                    $inc: {
+                        availableQuantity:
+                            -quantity
+                    }
+                },
+
+                {
+                    returnDocument:
+                        'after',
+
+                    session
+                }
+
+            );
+
+        if (!equipment) {
+
+            logger.warn(
+                'Borrow Equipment Failed',
+                {
+                    borrowerId,
+                    equipmentId,
+                    quantity,
+                    requestedBy:
+                        req.user?.userId,
+                    reason:
+                        'Equipment unavailable or insufficient quantity'
+                }
+            );
+
+            await session.abortTransaction();
+
+            return res.status(400).json({
+
+                success: false,
+
+                message:
+                    'Insufficient quantity available'
+
+            });
+
+        }
+
+        const records =
+            await BorrowRecord.create(
+
+                [
+
+                    {
+
+                        borrower:
+                            borrowerId,
+
+                        equipment:
+                            equipmentId,
+
+                        quantity,
+
+                        expectedReturnDate,
+
+                        remarks
+
+                    }
+
+                ],
+
+                {
+
+                    session
+
+                }
+
+            );
+
+        const record =
+            records[0];
+
+        await session.commitTransaction();
+
+        logger.info(
+            'Equipment Borrowed',
+            {
+
+                borrowRecordId:
+                    record._id,
+
+                borrowerId:
+                    borrower._id,
+
+                borrowerName:
+                    borrower.name,
+
+                equipmentId:
+                    equipment._id,
+
+                equipmentName:
+                    equipment.equipmentName,
+
+                quantity,
+
+                remainingQuantity:
+                    equipment.availableQuantity,
+
+                expectedReturnDate,
+
+                requestedBy:
+                    req.user?.userId
+
             }
         );
 
-        record.status = 'RETURNED';
-        record.actualReturnDate = new Date();
+        return res.status(201).json({
 
-        await record.save();
-
-
-        return res.status(200).json({
             success: true,
-            message: 'Equipment returned successfully',
-            data:record
-        });
 
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message
-        })
-    }
-}
+            message:
+                'Equipment borrowed successfully',
 
+            data: record
 
-
-
-const getActiveBorrowings = async (req, res) => {
-
-    try {
-
-        const page = Number(req.query.page) || 1;
-
-        const limit = Number(req.query.limit) || 10;
-
-        const skip = (page - 1) * limit;
-
-        const totalRecords = await BorrowRecord.countDocuments();
-
-    
-        const records = await BorrowRecord.find({status: 'BORROWED'})
-            .populate('borrower')
-            .populate('equipment')
-            .skip(skip)
-            .limit(limit);
-
-        return res.status(200).json({
-            success: true,
-            currentPage: page,
-            totalPages: Math.ceil(totalRecords/limit),
-            totalRecords,
-            data: records
         });
 
     } catch (error) {
 
+        await session.abortTransaction();
+
+        logger.error(
+            'Borrow Equipment Error',
+            {
+
+                borrowerId:
+                    req.body?.borrowerId,
+
+                equipmentId:
+                    req.body?.equipmentId,
+
+                requestedBy:
+                    req.user?.userId,
+
+                error:
+                    error.message,
+
+                stack:
+                    error.stack
+
+            }
+        );
+
         return res.status(500).json({
+
             success: false,
-            message: error.message
+
+            message:
+                error.message
+
         });
+
+    } finally {
+
+        session.endSession();
 
     }
 
@@ -199,10 +278,306 @@ const getActiveBorrowings = async (req, res) => {
 
 
 
+const returnEquipment = async (req, res) => {
+
+    try {
+
+        const { id } = req.params;
+
+        const record =
+            await BorrowRecord.findById(id);
+
+        if (!record) {
+
+            logger.warn(
+                'Return Equipment Failed',
+                {
+                    borrowRecordId: id,
+                    requestedBy: req.user?.userId,
+                    reason: 'Borrow record not found'
+                }
+            );
+
+            return res.status(404).json({
+
+                success: false,
+
+                message:
+                    'Borrow record not found'
+
+            });
+
+        }
+
+        if (!record.equipment) {
+
+            logger.warn(
+                'Return Equipment Failed',
+                {
+                    borrowRecordId: id,
+                    requestedBy: req.user?.userId,
+                    reason:
+                        'Equipment reference missing'
+                }
+            );
+
+            return res.status(400).json({
+
+                success: false,
+
+                message:
+                    'Equipment reference missing'
+
+            });
+
+        }
+
+        if (
+            record.status ===
+            'RETURNED'
+        ) {
+
+            logger.warn(
+                'Return Equipment Failed',
+                {
+                    borrowRecordId: id,
+                    requestedBy: req.user?.userId,
+                    reason:
+                        'Equipment already returned'
+                }
+            );
+
+            return res.status(400).json({
+
+                success: false,
+
+                message:
+                    'Equipment already returned'
+
+            });
+
+        }
+
+        const equipment =
+            await Equipment.findByIdAndUpdate(
+
+                record.equipment,
+
+                {
+
+                    $inc: {
+
+                        availableQuantity:
+                            record.quantity
+
+                    }
+
+                },
+
+                {
+
+                    returnDocument:
+                        'after'
+
+                }
+
+            );
+
+        record.status =
+            'RETURNED';
+
+        record.actualReturnDate =
+            new Date();
+
+        await record.save();
+
+        logger.info(
+            'Equipment Returned',
+            {
+
+                borrowRecordId:
+                    record._id,
+
+                borrowerId:
+                    record.borrower,
+
+                equipmentId:
+                    record.equipment,
+
+                quantity:
+                    record.quantity,
+
+                returnedAt:
+                    record.actualReturnDate,
+
+                availableQuantity:
+                    equipment?.availableQuantity,
+
+                requestedBy:
+                    req.user?.userId
+
+            }
+        );
+
+        return res.status(200).json({
+
+            success: true,
+
+            message:
+                'Equipment returned successfully',
+
+            data: record
+
+        });
+
+    } catch (error) {
+
+        logger.error(
+            'Return Equipment Error',
+            {
+
+                borrowRecordId:
+                    req.params?.id,
+
+                requestedBy:
+                    req.user?.userId,
+
+                error:
+                    error.message,
+
+                stack:
+                    error.stack
+
+            }
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                error.message
+
+        });
+
+    }
+
+};
+
+
+const getActiveBorrowings = async (req, res) => {
+
+    try {
+
+        const page =
+            Number(req.query.page) || 1;
+
+        const limit =
+            Number(req.query.limit) || 10;
+
+        const skip =
+            (page - 1) * limit;
+
+        const totalRecords =
+            await BorrowRecord.countDocuments({
+
+                status: 'BORROWED'
+
+            });
+
+        const records =
+            await BorrowRecord.find({
+
+                status: 'BORROWED'
+
+            })
+
+            .populate('borrower')
+
+            .populate('equipment')
+
+            .skip(skip)
+
+            .limit(limit);
+
+        logger.info(
+            'Active Borrowings Retrieved',
+            {
+
+                requestedBy:
+                    req.user?.userId,
+
+                page,
+
+                limit,
+
+                returnedRecords:
+                    records.length,
+
+                totalRecords
+
+            }
+        );
+
+        return res.status(200).json({
+
+            success: true,
+
+            currentPage: page,
+
+            totalPages:
+                Math.ceil(
+                    totalRecords / limit
+                ),
+
+            totalRecords,
+
+            data: records
+
+        });
+
+    } catch (error) {
+
+        logger.error(
+            'Get Active Borrowings Error',
+            {
+
+                requestedBy:
+                    req.user?.userId,
+
+                page:
+                    req.query?.page,
+
+                limit:
+                    req.query?.limit,
+
+                error:
+                    error.message,
+
+                stack:
+                    error.stack
+
+            }
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                error.message
+
+        });
+
+    }
+
+};
+
 
 const getBorrowHistory = async (req, res) => {
 
     try {
+
 
         const search = req.query.search || '';
 
@@ -316,6 +691,27 @@ const getBorrowHistory = async (req, res) => {
 
         const records = await BorrowRecord.aggregate(pipeline);
 
+        logger.info(
+        'Borrow History Retrieved',
+        {
+
+            requestedBy:
+                req.user?.userId,
+
+            search,
+
+            page,
+
+            limit,
+
+            returnedRecords:
+                records.length,
+
+            totalRecords
+
+        }
+    );
+
         
 
       
@@ -336,6 +732,32 @@ const getBorrowHistory = async (req, res) => {
 
     } catch(error) {
 
+
+        logger.error(
+    'Borrow History Error',
+    {
+
+        requestedBy:
+            req.user?.userId,
+
+        search:
+            req.query?.search,
+
+        page:
+            req.query?.page,
+
+        limit:
+            req.query?.limit,
+
+        error:
+            error.message,
+
+        stack:
+            error.stack
+
+    }
+);
+
         return res.status(500).json({
             success: false,
             message: error.message
@@ -343,6 +765,8 @@ const getBorrowHistory = async (req, res) => {
     }
 
 };
+
+
 
 
 const getBorrowerHistory = async (req, res) => {
@@ -462,11 +886,29 @@ const getBorrowerHistory = async (req, res) => {
 
         );
 
-        const records =
-            await BorrowRecord.aggregate(
-                pipeline
-            );
-            console.log(records)
+        const records = await BorrowRecord.aggregate(pipeline);
+
+        logger.info('Borrower History Retrieved',{
+
+        borrowerId: id,
+
+        requestedBy:
+            req.user?.userId,
+
+        search,
+
+        page,
+
+        limit,
+
+        returnedRecords:
+            records.length,
+
+        totalRecords
+
+    }
+    );
+        
 
         return res.status(200).json({
 
