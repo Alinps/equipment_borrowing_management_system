@@ -4,6 +4,7 @@ const Borrower = require('../models/Borrower');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
+const logger = require('../utils/logger');
 
 
 const registerAdmin = async (req, res) => {
@@ -23,6 +24,11 @@ const registerAdmin = async (req, res) => {
 
         if (!validator.isEmail(email)) {
 
+            logger.warn('Admin Registration Failed', {
+                email,
+                reason: 'Invalid email format'
+            });
+
             return res.status(400).json({
                 success: false,
                 message: 'Invalid email format'
@@ -33,6 +39,12 @@ const registerAdmin = async (req, res) => {
 
 
         if (adminSecret !== process.env.ADMIN_SECRET) {
+
+
+            logger.warn('Admin Registration Failed', {
+                email,
+                reason: 'Invalid admin secret'
+            });
 
             return res.status(403).json({
                 success: false,
@@ -48,6 +60,13 @@ const registerAdmin = async (req, res) => {
 
 
         if (existingUser) {
+
+            logger.warn('Admin Registration Failed', {
+                email,
+                reason: 'Email already exists'
+            });
+
+
             return res.status(400).json({
                 success: false,
                 message: "Email already exists"
@@ -62,6 +81,19 @@ const registerAdmin = async (req, res) => {
             department,
             password: hashedPassword,    
             role: 'ADMIN'
+        });
+
+
+        logger.info('Admin Registered', {
+
+            adminId: admin._id,
+
+            username: admin.username,
+
+            email: admin.email,
+
+            role: admin.role
+
         });
 
         res.status(201).json({
@@ -90,6 +122,14 @@ const adminLogin = async (req, res) => {
 
         if (!validator.isEmail(email)) {
 
+            logger.warn('Admin Login Failed', {
+
+                email,
+
+                reason: 'Invalid email format'
+
+            });
+
             return res.status(400).json({
                 success: false,
                 message: 'Invalid email format'
@@ -100,6 +140,16 @@ const adminLogin = async (req, res) => {
         const admin = await User.findOne({email});
 
         if (!admin){
+
+
+            logger.warn('Admin Login Failed', {
+
+                email,
+
+                reason: 'User not found'
+
+            });
+
 
             return res.status(401).json({
                 success: false,
@@ -115,6 +165,17 @@ const adminLogin = async (req, res) => {
         )
 
         if (!isPasswordCorrect) {
+
+
+            logger.warn('Admin Login Failed', {
+
+                email,
+
+                userId: admin._id,
+
+                reason: 'Incorrect password'
+
+            });
             
             return res.status(401).json({
                 success:false,
@@ -123,6 +184,20 @@ const adminLogin = async (req, res) => {
         }
 
         if (admin.role !== 'ADMIN') {
+
+
+            logger.warn('Admin Login Failed', {
+
+                email,
+
+                userId: admin._id,
+
+                role: admin.role,
+
+                reason: 'Access denied'
+
+            });
+
 
             return res.status(401).json({
                 success: false,
@@ -141,6 +216,19 @@ const adminLogin = async (req, res) => {
             }
         );
 
+        logger.info('Admin Login Success', {
+
+            userId: admin._id,
+
+            username: admin.username,
+
+            email: admin.email,
+
+            role: admin.role
+
+        });
+
+
         res.status(200).json({
             success: true,
             token,
@@ -148,6 +236,18 @@ const adminLogin = async (req, res) => {
         });
 
     } catch (error){
+
+        logger.error('Admin Login Error', {
+
+            email: req.body?.email,
+
+            error: error.message,
+
+            stack: error.stack
+
+        });
+
+
         res.status(500).json({
             success: false,
             message: error.message
@@ -170,6 +270,14 @@ const listUsers = async (req, res) => {
 
         }).sort({ createdAt: -1 }); //  find all the users from the db and sorted in descending order by created time
 
+         logger.info('User List Retrieved', {
+
+            requestedBy: req.user?.userId,
+
+            totalUsers: users.length
+
+        });
+
         return res.status(200).json({
             success: true,
             count: users.length,
@@ -177,6 +285,16 @@ const listUsers = async (req, res) => {
         });
 
     } catch (error) {
+
+        logger.error('List Users Failed', {
+
+            requestedBy: req.user?.userId,
+
+            error: error.message,
+
+            stack: error.stack
+
+        });
         
         return res.status(500).json({
             success:false,
@@ -242,6 +360,18 @@ const createBorrower = async (req, res) => {
 
          if (!validator.isEmail(email)) {
 
+
+            logger.warn('Borrower Creation Failed', {
+
+                email,
+
+                reason: 'Invalid email format',
+
+                requestedBy: req.user?.userId
+
+            });
+
+
             return res.status(400).json({
                 success: false,
                 message: 'Invalid email format'
@@ -255,6 +385,16 @@ const createBorrower = async (req, res) => {
 
         if (existingBorrower) {
             
+            logger.warn('Borrower Creation Failed', {
+
+                email,
+
+                reason: 'Email already exists',
+
+                requestedBy: req.user?.userId
+
+            });
+
             return res.status(400).json({
                 success: false,
                 message: "Email already exists"
@@ -268,6 +408,21 @@ const createBorrower = async (req, res) => {
             department
         });
 
+
+        logger.info('Borrower Created', {
+
+            borrowerId: borrower._id,
+
+            name: borrower.name,
+
+            email: borrower.email,
+
+            department: borrower.department,
+
+            requestedBy: req.user?.userId
+
+        });
+
         return res.status(201).json({
             success: true,
             message: "Borrower created successfully",
@@ -275,6 +430,19 @@ const createBorrower = async (req, res) => {
         })
 
     } catch (error) {
+
+
+        logger.error('Borrower Creation Error', {
+
+            email: req.body?.email,
+
+            requestedBy: req.user?.userId,
+
+            error: error.message,
+
+            stack: error.stack
+
+        });
 
         return res.status(500).json({
             success: false,
@@ -315,11 +483,47 @@ const editBorrower = async (req, res) => {
 
         if (!borrower) {
 
+            
+            logger.warn(
+                'Borrower Update Failed',
+                {
+
+                    borrowerId: id,
+
+                    requestedBy:
+                        req.user?.userId,
+
+                    reason:
+                        'Borrower not found'
+
+                }
+            );
+
+
             return res.status(404).json({
                 success: false,
                 message: "Borrower not found"
             });
         }
+
+        logger.info(
+            'Borrower Updated',
+            {
+
+                borrowerId:
+                    borrower._id,
+
+                updatedFields:
+                    Object.keys(
+                        updatedData
+                    ),
+
+                requestedBy:
+                    req.user?.userId
+
+            }
+        );
+        
         
         return res.status(200).json({
             success: true,
@@ -337,7 +541,7 @@ const editBorrower = async (req, res) => {
 
 
 const listBorrower = async (req, res) => {
-    
+
     try {
 
         const search = req.query.search || '';
@@ -352,78 +556,212 @@ const listBorrower = async (req, res) => {
 
         if (search) {
 
-            query.$or= [
+            query.$or = [
+
                 {
-                    name:{
+                    name: {
                         $regex: search,
                         $options: 'i'
                     }
                 },
+
                 {
-                    department:{
+                    department: {
                         $regex: search,
                         $options: 'i'
                     }
-                },
-            ]
+                }
+
+            ];
 
         }
 
         const totalRecords = await Borrower.countDocuments(query);
 
         const borrowers = await Borrower.find(query)
-                                        .sort({createdAt: -1})
+                                        .sort({
+                                            createdAt: -1
+                                        })
                                         .skip(skip)
                                         .limit(limit);
+
+        logger.info(
+            'Borrower List Retrieved',
+            {
+
+                requestedBy:
+                    req.user?.userId,
+
+                search,
+
+                page,
+
+                limit,
+
+                returnedRecords:
+                    borrowers.length,
+
+                totalRecords
+
+            }
+        );
 
         return res.status(200).json({
 
             success: true,
+
             currentPage: page,
-            totalPages: Math.ceil(totalRecords/limit),
-            count: borrowers.length,
+
+            totalPages:
+                Math.ceil(
+                    totalRecords / limit
+                ),
+
+            count:
+                borrowers.length,
+
             totalRecords,
+
             data: borrowers
 
         });
 
     } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-}
 
+        logger.error(
+            'Borrower List Error',
+            {
+
+                requestedBy:
+                    req.user?.userId,
+
+                search:
+                    req.query?.search,
+
+                page:
+                    req.query?.page,
+
+                error:
+                    error.message,
+
+                stack:
+                    error.stack
+
+            }
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                error.message
+
+        });
+
+    }
+
+};
 
 const deleteBorrower = async (req, res) => {
 
     try {
 
-        const {id} = req.params;
+        const { id } = req.params;
+
         const borrower = await Borrower.findByIdAndDelete(id);
 
         if (!borrower) {
-        
+
+            logger.warn(
+                'Borrower Deletion Failed',
+                {
+
+                    borrowerId: id,
+
+                    requestedBy:
+                        req.user?.userId,
+
+                    reason:
+                        'Borrower not found'
+
+                }
+            );
+
             return res.status(404).json({
+
                 success: false,
-                message: "borrower not found"
+
+                message: 'Borrower not found'
+
             });
+
         }
 
+        logger.info(
+            'Borrower Deleted',
+            {
+
+                borrowerId:
+                    borrower._id,
+
+                borrowerName:
+                    borrower.name,
+
+                borrowerEmail:
+                    borrower.email,
+
+                department:
+                    borrower.department,
+
+                requestedBy:
+                    req.user?.userId
+
+            }
+        );
+
         return res.status(200).json({
+
             success: true,
-            message: "borrower deleted successfully"
-        })
+
+            message:
+                'Borrower deleted successfully'
+
+        });
+
     } catch (error) {
 
-        return res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-}
+        logger.error(
+            'Borrower Deletion Error',
+            {
 
+                borrowerId:
+                    req.params?.id,
+
+                requestedBy:
+                    req.user?.userId,
+
+                error:
+                    error.message,
+
+                stack:
+                    error.stack
+
+            }
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                error.message
+
+        });
+
+    }
+
+};
 
 const borrowerById = async (req, res) => {
 

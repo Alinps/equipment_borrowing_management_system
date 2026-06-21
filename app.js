@@ -11,6 +11,8 @@ const equipmentRoutes =  require('./routes/equipmentRoutes');
 const userRoutes = require('./routes/userRoutes');
 const borrowRoutes = require('./routes/borrowRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes')
+const requestLogger = require('./middleware/requestLogger');
+
 
 var app = express();
 
@@ -31,6 +33,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(requestLogger);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
