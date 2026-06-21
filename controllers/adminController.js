@@ -340,12 +340,51 @@ const listBorrower = async (req, res) => {
     
     try {
 
-        const borrowers = await Borrower.find().sort({createdAt: -1});
+        const search = req.query.search || '';
+
+        const page = Number(req.query.page) || 1;
+
+        const limit = Number(req.query.limit) || 10;
+
+        const skip = (page - 1) * limit;
+
+        const query = {};
+
+        if (search) {
+
+            query.$or= [
+                {
+                    name:{
+                        $regex: search,
+                        $options: 'i'
+                    }
+                },
+                {
+                    department:{
+                        $regex: search,
+                        $options: 'i'
+                    }
+                },
+            ]
+
+        }
+
+        const totalRecords = await Borrower.countDocuments(query);
+
+        const borrowers = await Borrower.find(query)
+                                        .sort({createdAt: -1})
+                                        .skip(skip)
+                                        .limit(limit);
 
         return res.status(200).json({
+
             success: true,
+            currentPage: page,
+            totalPages: Math.ceil(totalRecords/limit),
             count: borrowers.length,
+            totalRecords,
             data: borrowers
+
         });
 
     } catch (error) {
